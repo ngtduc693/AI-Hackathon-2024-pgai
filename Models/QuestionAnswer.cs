@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Npgsql;
+using NpgsqlTypes;
+using System.ComponentModel.DataAnnotations;
 
 namespace InsuranceBot.Models
 {

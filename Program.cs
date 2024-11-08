@@ -1,11 +1,15 @@
 ﻿using InsuranceBot.Data;
+using InsuranceBot.Models;
 using InsuranceBot.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace InsuranceBot
 {
@@ -14,6 +18,11 @@ namespace InsuranceBot
         public static void Main(string[] args)
         {
             var host = CreateHostBuilder(args).Build();
+            var configuration = host.Services.GetRequiredService<IConfiguration>();
+
+            var ollamaApiUrl = configuration.GetValue<string>("Ollama:ApiUrl");
+            var isEmbedEnabled = configuration.GetValue<bool>("Embeed:Enabled");
+            Console.WriteLine($"Ollama API URL: {ollamaApiUrl}");
 
             using (var scope = host.Services.CreateScope())
             {
@@ -30,6 +39,14 @@ namespace InsuranceBot
                         var seeder = services.GetRequiredService<DatabaseSeeder>();
                         seeder.SeedData();
                     }
+
+                    if (isEmbedEnabled)
+                    {
+                        var embeddingGenerator = services.GetRequiredService<EmbeddingGenerator>();
+                        var questionAnswers = dbContext.QuestionAnswers.ToList().Where(t => t.Embedding == null);
+
+                        embeddingGenerator.GenerateEmbeddingsForQuestionsAnswersAsync(questionAnswers).Wait();
+                    }                    
                 }
                 catch (Exception ex)
                 {
@@ -46,5 +63,6 @@ namespace InsuranceBot
                 {
                     webBuilder.UseStartup<Startup>();
                 });
+       
     }
 }

@@ -38,6 +38,10 @@ namespace InsuranceBot
                 options.UseNpgsql(Configuration.GetConnectionString("TimescaleDB")));
 
             services.AddScoped<DatabaseSeeder>();
+
+            services.AddHttpClient<EmbeddingService>();
+
+            services.AddScoped<EmbeddingGenerator>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
