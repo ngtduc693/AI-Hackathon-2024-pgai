@@ -20,23 +20,30 @@ namespace InsuranceBot.Services
 
         public void SeedData()
         {
-            if (_dbContext.QuestionAnswers.Any())
+            try
             {
-                Console.WriteLine("Database already seeded.");
-                return;
+                if (_dbContext.QuestionAnswers.Any())
+                {
+                    Console.WriteLine("Database already seeded.");
+                    return;
+                }
+
+                var csvFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "questions_answers.csv");
+
+                using var reader = new StreamReader(csvFilePath);
+                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+
+                var questionAnswers = csv.GetRecords<QuestionAnswer>().ToList();
+
+                _dbContext.QuestionAnswers.AddRange(questionAnswers);
+                _dbContext.SaveChanges();
+
+                Console.WriteLine("Database seeded successfully.");
             }
-
-            var csvFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "questions_answers.csv");
-
-            using var reader = new StreamReader(csvFilePath);
-            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-
-            var questionAnswers = csv.GetRecords<QuestionAnswer>().ToList();
-
-            _dbContext.QuestionAnswers.AddRange(questionAnswers);
-            _dbContext.SaveChanges();
-
-            Console.WriteLine("Database seeded successfully.");
+            catch (Exception ex)
+            {
+                Console.WriteLine("An error occurred seeding the DB: " + ex.Message);
+            }
         }
     }
 }
