@@ -3,4 +3,4 @@ This GitHub repository is used for my participation in a hackathon challenge wit
 
 Theme: The Open Source AI Challenge with pgai and Ollama</br>
 Start date: 09-Nov-2024</br>
-End date: 11-Nov-2024</br>
+End date: 10-Nov-2024</br>
