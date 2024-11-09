@@ -25,7 +25,7 @@ namespace InsuranceBot.Services
         {
             var payload = new
             {
-                model = "llama3.2",
+                model = "nomic-embed-text:latest",
                 input = new[] { text }
             };
 

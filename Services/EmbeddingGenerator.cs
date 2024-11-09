@@ -3,6 +3,7 @@ using InsuranceBot.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Runtime.Caching;
 using System.Threading.Tasks;
 
 namespace InsuranceBot.Services
@@ -11,11 +12,13 @@ namespace InsuranceBot.Services
     {
         private readonly EmbeddingService _embeddingService;
         private readonly ApplicationDbContext _dbContext;
+        private readonly MemoryCache _cache;
 
         public EmbeddingGenerator(EmbeddingService embeddingService, ApplicationDbContext dbContext)
         {
             _embeddingService = embeddingService;
             _dbContext = dbContext;
+            _cache = MemoryCache.Default;
         }
 
         public async Task GenerateEmbeddingsForQuestionsAnswersAsync(IEnumerable<QuestionAnswer> questionAnswers)
@@ -23,8 +26,6 @@ namespace InsuranceBot.Services
             foreach (var qa in questionAnswers)
             {
                 var questionEmbedding = await _embeddingService.GetEmbeddingsAsync(qa.Question);
-                var answerEmbedding = await _embeddingService.GetEmbeddingsAsync(qa.Answer);
-
 
                 qa.Embedding = questionEmbedding;
                 await SaveEmbeddingsToDatabase(qa);
@@ -35,21 +36,36 @@ namespace InsuranceBot.Services
         {
             float[] userQueryEmbedding = await _embeddingService.GetEmbeddingsAsync(userQuery);
 
-            var questionAnswers = await _dbContext.QuestionAnswers.ToListAsync();
+            var cacheKey = "questionAnswersCacheKey";
+            var cachedData = _cache.Get(cacheKey) as List<QuestionAnswer>;
+
+            List<QuestionAnswer> questionAnswers;
+
+            if (cachedData != null)
+            {
+                questionAnswers = cachedData;
+            }
+            else
+            {
+                questionAnswers = await _dbContext.QuestionAnswers.ToListAsync();
+            }
 
             QuestionAnswer mostSimilarQuestion = null;
             float highestSimilarity = -1;
 
-            foreach (var qa in questionAnswers)
+            Parallel.ForEach(questionAnswers, (qa) =>
             {
                 float similarity = CalculateCosineSimilarity(userQueryEmbedding, qa.Embedding);
 
-                if (similarity > highestSimilarity)
+                lock (this)
                 {
-                    highestSimilarity = similarity;
-                    mostSimilarQuestion = qa;
+                    if (similarity > highestSimilarity)
+                    {
+                        highestSimilarity = similarity;
+                        mostSimilarQuestion = qa;
+                    }
                 }
-            }
+            });
 
             return mostSimilarQuestion;
         }
