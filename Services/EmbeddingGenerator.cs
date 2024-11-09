@@ -1,6 +1,7 @@
 ﻿using InsuranceBot.Data;
 using InsuranceBot.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -28,6 +29,48 @@ namespace InsuranceBot.Services
                 qa.Embedding = questionEmbedding;
                 await SaveEmbeddingsToDatabase(qa);
             }
+        }
+
+        internal async Task<QuestionAnswer> FindMostSimilarQuestionAsync(string userQuery)
+        {
+            float[] userQueryEmbedding = await _embeddingService.GetEmbeddingsAsync(userQuery);
+
+            var questionAnswers = await _dbContext.QuestionAnswers.ToListAsync();
+
+            QuestionAnswer mostSimilarQuestion = null;
+            float highestSimilarity = -1;
+
+            foreach (var qa in questionAnswers)
+            {
+                float similarity = CalculateCosineSimilarity(userQueryEmbedding, qa.Embedding);
+
+                if (similarity > highestSimilarity)
+                {
+                    highestSimilarity = similarity;
+                    mostSimilarQuestion = qa;
+                }
+            }
+
+            return mostSimilarQuestion;
+        }
+
+        internal float CalculateCosineSimilarity(float[] vector1, float[] vector2)
+        {
+            if (vector1.Length != vector2.Length)
+                throw new ArgumentException("Vectors must be the same length");
+
+            float dotProduct = 0;
+            float magnitudeA = 0;
+            float magnitudeB = 0;
+
+            for (int i = 0; i < vector1.Length; i++)
+            {
+                dotProduct += vector1[i] * vector2[i];
+                magnitudeA += vector1[i] * vector1[i];
+                magnitudeB += vector2[i] * vector2[i];
+            }
+
+            return dotProduct / (float)(Math.Sqrt(magnitudeA) * Math.Sqrt(magnitudeB));
         }
 
         private async Task SaveEmbeddingsToDatabase(QuestionAnswer qa)

@@ -1,5 +1,6 @@
 ﻿// Generated with Bot Builder V4 SDK Template for Visual Studio EchoBot v4.22.0
 
+using InsuranceBot.Services;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
 using System.Collections.Generic;
@@ -10,15 +11,33 @@ namespace InsuranceBot.Bots
 {
     public class EchoBot : ActivityHandler
     {
-        protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
+        private readonly EmbeddingGenerator _embeddingGenerator;
+        public EchoBot(EmbeddingGenerator embeddingGenerator)
         {
-            var replyText = $"Echo: {turnContext.Activity.Text}";
+            _embeddingGenerator = embeddingGenerator;
+        }
+        protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
+        {            
+            var userQuery = turnContext.Activity.Text;
+
+            var similarQuestionAnswer = await _embeddingGenerator.FindMostSimilarQuestionAsync(userQuery);
+
+            string replyText;
+            if (similarQuestionAnswer != null)
+            {
+                replyText = $"Answer: {similarQuestionAnswer.Answer}";
+            }
+            else
+            {
+                replyText = "Sorry, I couldn't find this answers.";
+            }
             await turnContext.SendActivityAsync(MessageFactory.Text(replyText, replyText), cancellationToken);
         }
 
         protected override async Task OnMembersAddedAsync(IList<ChannelAccount> membersAdded, ITurnContext<IConversationUpdateActivity> turnContext, CancellationToken cancellationToken)
         {
             var welcomeText = "Welcome!";
+
             foreach (var member in membersAdded)
             {
                 if (member.Id != turnContext.Activity.Recipient.Id)
