@@ -1,5 +1,4 @@
 ﻿using InsuranceBot.Data;
-using InsuranceBot.Models;
 using InsuranceBot.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -7,9 +6,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Runtime.Caching;
 
 namespace InsuranceBot
 {
@@ -46,7 +44,14 @@ namespace InsuranceBot
                         var questionAnswers = dbContext.QuestionAnswers.ToList().Where(t => t.Embedding == null);
 
                         embeddingGenerator.GenerateEmbeddingsForQuestionsAnswersAsync(questionAnswers).Wait();
-                    }                    
+                    }
+
+                    var cache = MemoryCache.Default;
+                    var cachedData = dbContext.QuestionAnswers.ToList();
+                    cache.Set("questionAnswersCacheKey", cachedData, new CacheItemPolicy
+                    {
+                        AbsoluteExpiration = ObjectCache.InfiniteAbsoluteExpiration
+                    });
                 }
                 catch (Exception ex)
                 {
